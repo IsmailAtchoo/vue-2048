@@ -1,6 +1,6 @@
 .on-manual-trigger:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "web"
+    - when: manual
 
 static-typing-job:
   extends: .on-manual-trigger
