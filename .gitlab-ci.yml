@@ -34,4 +34,4 @@ deploy-prod:
   rules:
     - when: manual
   script:
-    - vercel --prod
+    - vercel deploy --prebuilt
