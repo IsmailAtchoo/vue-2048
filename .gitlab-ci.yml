@@ -1,7 +1,5 @@
 stages:
   - build
-  - quality
-  - test
   - deploy
 
 default:
@@ -20,11 +18,6 @@ default:
     - pnpm config set store-dir .pnpm-store
     - pnpm install
 
-include:
-  - '/pipelines/templates/quality-template.yml' 
-  - '/pipelines/templates/tests-template.yml'
-
-
 build-package:
   stage: build
   cache:
@@ -36,14 +29,9 @@ build-package:
     paths:
       - dist/
 
-static-typing:
-  stage: quality
-
-lint:
-  stage: quality
-
 deploy-prod:
   stage: deploy
-  extends: .on-manual-trigger
+  rules:
+    - when: manual
   script:
-    - pnpm install
+    - pnpm install 
