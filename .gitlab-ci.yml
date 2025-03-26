@@ -37,12 +37,12 @@ deploy-staging:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   script:
-    - vercel deploy --prebuilt --cwd dist/ --token=$VERCEL_TOKEN
+    - vercel deploy --cwd dist/ --token=$VERCEL_TOKEN
 
 deploy-prod:
   stage: deploy
   rules:
       - when: manual
   script:
-    - vercel deploy --prebuilt --cwd=dist --prod --token=$VERCEL_TOKEN
+    - vercel deploy --cwd=dist --prod --token=$VERCEL_TOKEN
 
