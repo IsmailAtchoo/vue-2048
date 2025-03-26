@@ -44,7 +44,7 @@ deploy-staging:
 deploy-prod:
   stage: deploy
   rules:
-      when: manual
+      - when: manual
   script:
     - npm install --global vercel
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
