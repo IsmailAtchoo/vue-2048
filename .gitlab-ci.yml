@@ -34,5 +34,4 @@ deploy-prod:
   rules:
     - when: manual
   script:
-    - echo "VERCEL_TOKEN is set to: ${#VERCEL_TOKEN} characters"
-    - npx vercel deploy --prebuilt --token= $VERCEL_TOKEN
+    - npx vercel deploy --prebuilt --token $VERCEL_TOKEN
