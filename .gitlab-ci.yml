@@ -17,6 +17,7 @@ default:
     - corepack prepare pnpm@latest-10 --activate
     - pnpm config set store-dir .pnpm-store
     - pnpm install
+    - npm install --global vercel
 
 # build 
 build-package:
@@ -36,14 +37,12 @@ deploy-staging:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   script:
-    - npm install --global vercel
-    - vercel deploy --prebuilt --cwd=dist --token=$VERCEL_TOKEN
+    - vercel deploy --prebuilt --cwd dist/ --token=$VERCEL_TOKEN
 
 deploy-prod:
   stage: deploy
   rules:
       - when: manual
   script:
-    - npm install --global vercel 
     - vercel deploy --prebuilt --cwd=dist --prod --token=$VERCEL_TOKEN
 
