@@ -34,4 +34,5 @@ deploy-prod:
   rules:
     - when: manual
   script:
+    - pnpm add -g vercel
     - vercel deploy --prebuilt
