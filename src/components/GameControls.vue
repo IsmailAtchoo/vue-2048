@@ -15,7 +15,7 @@ const game = useGameStore()
       </div>
     </div>
     <div text-3xl font-mono op50>
-      Score
+      Score diali
     </div>
     <div op50>
       Join the tiles, get to 2048!
