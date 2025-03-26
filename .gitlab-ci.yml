@@ -18,6 +18,7 @@ default:
     - pnpm config set store-dir .pnpm-store
     - pnpm install
 
+# build 
 build-package:
   stage: build
   cache:
@@ -29,6 +30,7 @@ build-package:
     paths:
       - dist/
 
+# deploy
 deploy-staging:
   stage: deploy
   rules:
