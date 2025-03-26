@@ -45,9 +45,10 @@ deploy-prod:
   stage: deploy
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
-    - when: manual
+      when: manual
   script:
     - npm install --global vercel
     - vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-    - vercel build
-    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+    - vercel build --prod --token=$VERCEL_TOKEN  
+    - vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN 
+
