@@ -1,9 +1,7 @@
 stages:
   - build
-  - prod
   - qa
-  
-
+  - production
 default:
   image: node:latest
   cache: &global_cache
@@ -31,14 +29,14 @@ build-package:
     paths:
       - dist/
 
-deploy-prod:
-  stage: prod
+prod-deploy:
+  stage: production
   script:
-    - swa deploy ./dist --env production
+    - npm install -g @azure/static-web-apps-cli
+    - swa deploy ./dist --env=production --deployment-token $AZURE_PROD_TOKEN
 
-deploy-qa:
+QA-deploy:
   stage: qa
   script:
-    - swa deploy ./dist --env qa
-
-
+    - npm install -g @azure/static-web-apps-cli
+    - swa deploy ./dist --env=production --deployment-token $AZURE_QA_TOKEN
