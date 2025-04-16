@@ -33,11 +33,11 @@ prod-deploy:
   stage: production
   script:
     - npm install -g @azure/static-web-apps-cli
-    - swa deploy ./dist --env=production --deployment-token e01abeb6dd818ed9cf4cc003ee276281e7c0b24b790587f5822f739b053da07006-874b5aa0-bcae-4142-8637-925072b1aeeb00309100d1458903
+    - swa deploy ./dist --env=production --deployment-token $SWA_PROD_TOKEN
 
 QA-deploy:
   stage: qa
   script:
     - npm install -g @azure/static-web-apps-cli
     - echo $AZURE_QA_TOKEN
-    - swa deploy ./dist --env=production --deployment-token 215409829e902222cad4a52f1dc357f9e28271dc5a9a356e2f8bf5c52a95aaa906-2fbde022-b22f-48bc-80e1-b5960964526d010232900969e910
+    - swa deploy ./dist --env=production --deployment-token $SWA_QA_TOKEN
