@@ -39,4 +39,5 @@ QA-deploy:
   stage: qa
   script:
     - npm install -g @azure/static-web-apps-cli
-    - swa deploy ./dist --env=production --deployment-token $AZURE_QA_TOKEN
+    - echo $AZURE_QA_TOKEN
+    - swa deploy ./dist --env=production --deployment-token e01abeb6dd818ed9cf4cc003ee276281e7c0b24b790587f5822f739b053da07006-874b5aa0-bcae-4142-8637-925072b1aeeb00309100d1458903
