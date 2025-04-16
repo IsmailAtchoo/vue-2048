@@ -33,7 +33,7 @@ prod-deploy:
   stage: production
   script:
     - npm install -g @azure/static-web-apps-cli
-    - echo$SWA_PROD_TOKEN
+    - echo $SWA_PROD_TOKEN
     - swa deploy ./dist --env=production --deployment-token $SWA_PROD_TOKEN
 
 QA-deploy:

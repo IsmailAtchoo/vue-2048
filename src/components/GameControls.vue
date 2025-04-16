@@ -28,7 +28,7 @@ const game = useGameStore()
       <div text-3xl>
         {{ game.highScore }}
       </div>
-      <div text-base op70>
+      <div class="text-base text-blue-500 op70">
         High Score
       </div>
     </div>
