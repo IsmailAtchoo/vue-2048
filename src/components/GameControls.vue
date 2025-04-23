@@ -18,7 +18,7 @@ const game = useGameStore()
       Score diali
     </div>
     <div op50>
-      Join the tiles, get to 2048 you idiot!
+      Join the tiles, get to 2048 you idiotkkkkkk!
     </div>
   </div>
 
