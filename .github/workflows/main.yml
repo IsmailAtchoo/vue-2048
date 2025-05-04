@@ -1,13 +1,41 @@
-name: lab9
+name: CI-CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+    tags:
+      - 'v*'
   pull_request:
-    branches: [ main ]
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+  # exécution manuelle
+  workflow_dispatch:
+    inputs:
+      run_checks:
+        description: 'Exécuter lint / type-check / tests ?'
+        required: true
+        type: boolean
+        default: true
+  # exécution hebdomadaire (lundi 08:00 Europe/Paris = 06:00 UTC)
+  schedule:
+    - cron: '0 6 * * 1'
+
+env:
+  NODE_VERSION: 20
+  PNPM_VERSION: latest
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
-  build:
+  # ------------------------------------------------------------------
+  # BUILD principal (push sur main)
+  # ------------------------------------------------------------------
+  build-main:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -15,20 +43,27 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
 
-      - run: |
+      - name: Install pnpm
+        run: |
           corepack enable
-          corepack prepare pnpm@latest --activate
+          corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
 
       - run: pnpm install
       - run: pnpm build
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload dist artifact (1 semaine)
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
-  build-pull:
+          retention-days: 7
+
+  # ------------------------------------------------------------------
+  # BUILD sur Pull-Request
+  # ------------------------------------------------------------------
+  build-pr:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
@@ -36,18 +71,179 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
 
-      - run: |
+      - name: Install pnpm
+        run: |
           corepack enable
-          corepack prepare pnpm@latest --activate
+          corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
 
       - run: pnpm install
+      - run: pnpm build
+      - run: pnpm type-check
+      - run: pnpm lint --fix
+      - run: pnpm test
 
+      - name: Upload dist artifact (24 h)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # ------------------------------------------------------------------
+  # Exécution manuelle (workflow_dispatch / schedule)
+  # ------------------------------------------------------------------
+  manual-build:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@${{ env.PNPM_VERSION }} --activate
+
+      - run: pnpm install
       - run: pnpm build
 
-      - run: pnpm type-check
+      - name: Conditional static checks
+        if: github.event_name == 'schedule' || inputs.run_checks == 'true'
+        run: |
+          pnpm type-check
+          pnpm lint --fix
+          pnpm test
 
-      - run: pnpm lint --fix
+      - name: Upload dist artifact (24 h)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
 
-      - run: pnpm test
+  # ------------------------------------------------------------------
+  # Déploiement QA depuis exécution manuelle
+  # ------------------------------------------------------------------
+  deploy-qa:
+    if: github.event_name == 'workflow_dispatch'
+    needs: manual-build
+    runs-on: ubuntu-latest
+    environment: qa
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install Static Web Apps CLI
+        run: npm install -g @azure/static-web-apps-cli
+
+      - name: Deploy to QA (preview env)
+        env:
+          SWA_QA_TOKEN: ${{ secrets.SWA_QA_TOKEN }}
+        run: |
+          echo "🚀 Déploiement QA…"
+          swa deploy ./dist --env=preview --deployment-token $SWA_QA_TOKEN
+
+  # ------------------------------------------------------------------
+  # Déploiement PROD (après QA)
+  # ------------------------------------------------------------------
+  deploy-prod:
+    if: github.event_name == 'workflow_dispatch'
+    needs: deploy-qa
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install Static Web Apps CLI
+        run: npm install -g @azure/static-web-apps-cli
+
+      - name: Deploy to PROD
+        env:
+          SWA_PROD_TOKEN: ${{ secrets.SWA_PROD_TOKEN }}
+        run: |
+          echo "🚀 Déploiement PROD…"
+          swa deploy ./dist --env=production --deployment-token $SWA_PROD_TOKEN
+
+  # ------------------------------------------------------------------
+  # Release & déploiement global lors du push d'un tag (v*)
+  # ------------------------------------------------------------------
+  release-and-deploy:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build-main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/**
+
+      - name: Install Static Web Apps CLI
+        run: npm install -g @azure/static-web-apps-cli
+
+      - name: Deploy tag to QA
+        env:
+          SWA_QA_TOKEN: ${{ secrets.SWA_QA_TOKEN }}
+        run: swa deploy ./dist --env=preview --deployment-token $SWA_QA_TOKEN
+
+      - name: Deploy tag to PROD
+        env:
+          SWA_PROD_TOKEN: ${{ secrets.SWA_PROD_TOKEN }}
+        run: swa deploy ./dist --env=production --deployment-token $SWA_PROD_TOKEN
+
+  # ------------------------------------------------------------------
+  # (Optionnel) Preview environement éphémère si label "preview" sur la PR
+  # ------------------------------------------------------------------
+  preview-env:
+    if: github.event_name == 'pull_request' && contains(join(github.event.pull_request.labels.*.name, ','), 'preview')
+    runs-on: ubuntu-latest
+    environment: preview-${{ github.head_ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Static Web Apps CLI
+        run: npm install -g @azure/static-web-apps-cli
+      - name: Créer env éphémère & déployer
+        env:
+          SWA_QA_TOKEN: ${{ secrets.SWA_QA_TOKEN }}
+        run: |
+          envName=preview-${{ github.head_ref }}
+          echo "Création d'un environnement preview pour la branche ${{ github.head_ref }}…"
+          swa deploy ./ --env=preview --deployment-token $SWA_QA_TOKEN --app-name $envName
+      - name: Poster le lien dans la PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const envUrl = `https://preview-${{ github.head_ref }}.azurestaticapps.net`;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `✨ Environnement de pré-prod prêt : ${envUrl}`
+            });
+
+  cleanup-preview-env:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && contains(join(github.event.pull_request.labels.*.name, ','), 'preview')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Détruire l'environnement preview
+        env:
+          SWA_QA_TOKEN: ${{ secrets.SWA_QA_TOKEN }}
+        run: |
+          envName=preview-${{ github.head_ref }}
+          echo "Suppression de l'environnement preview pour la branche ${{ github.head_ref }}…"
+          swa env delete $envName --deployment-token $SWA_QA_TOKEN
